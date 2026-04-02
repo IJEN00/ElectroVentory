@@ -28,7 +28,7 @@
                 <div class="mb-3">
                     <label asp-for="Description" class="form-label">Popis</label>
                     <textarea asp-for="Description" class="form-control" rows="5" placeholder="Můžete použít **tučné**, - odrážky, atd."></textarea>
-                    <div class="form-text">Zde můžete napsat detailní zadání, odkazy na dokumentaci nebo poznámky.</div>
+                    <div class="form-text">Zde můžete napsat detailní zadání nebo poznámky.</div>
                     <span asp-validation-for="Description" class="text-danger"></span>
                 </div>
 
@@ -49,19 +49,17 @@
                     <div class="col-md-6">
                         <label asp-for="OrderedAt" class="form-label">Datum objednání (PCB/Díly)</label>
                         <input asp-for="OrderedAt" class="form-control" type="date" />
-                        <div class="form-text">Kdy jste odeslali data výrobci?</div>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="ReceivedAt" class="form-label">Datum doručení</label>
                         <input asp-for="ReceivedAt" class="form-control" type="date" />
-                        <div class="form-text">Kdy dorazil balík (např. 15. den)?</div>
                     </div>
                 </div>
 
                 <hr class="my-4" />
 
                 @* --- 3. ČASOVÁ NÁROČNOST --- *@
-                <h6 class="text-muted text-uppercase small fw-bold mb-3">Časová náročnost (Time Tracking)</h6>
+                <h6 class="text-muted text-uppercase small fw-bold mb-3">Časová náročnost</h6>
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <label asp-for="EstimatedHours" class="form-label">Odhadovaný čas (hodiny)</label>
@@ -69,15 +67,13 @@
                             <input asp-for="EstimatedHours" class="form-control" type="number" step="0.5" />
                             <span class="input-group-text">hod</span>
                         </div>
-                        <div class="form-text">Plánovaný čas montáže.</div>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="RealHours" class="form-label">Skutečně odpracováno</label>
+                        <label asp-for="RealHours" class="form-label">Reálný čas</label>
                         <div class="input-group">
                             <input asp-for="RealHours" class="form-control" type="number" step="0.5" />
                             <span class="input-group-text">hod</span>
                         </div>
-                        <div class="form-text">Kolik času to reálně zabralo.</div>
                     </div>
                 </div>
 
