@@ -11,65 +11,54 @@
     @* --- HLAVIČKA A STAVY PROJEKTU --- *@
     <div class="d-flex justify-content-between align-items-center mb-4">
 
-        <div class="d-flex align-items-center gap-3">
-            <a asp-action="Index" class="btn btn-light rounded-circle shadow-sm border" title="Zpět na seznam" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-arrow-left"></i>
-            </a>
+        @* LEVÁ STRANA: Nadpis a stavy *@
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h2 class="fw-bold mb-0">@Model.Project.Name</h2>
 
-            <div>
-                <div class="d-flex align-items-center gap-3">
-                    <h2 class="fw-bold mb-0">@Model.Project.Name</h2>
+                @switch (Model.Project.Status)
+                {
+                    case ProjectStatus.Planning:
+                        <span class="badge bg-secondary rounded-pill">Plánování</span>
+                        break;
+                    case ProjectStatus.Ordered:
+                        <span class="badge bg-warning text-dark rounded-pill">Objednáno</span>
+                        break;
+                    case ProjectStatus.ReadyToBuild:
+                        <span class="badge bg-info text-dark rounded-pill">Připraveno</span>
+                        break;
+                    case ProjectStatus.InProduction:
+                        <span class="badge bg-primary rounded-pill">Ve výrobě</span>
+                        break;
+                    case ProjectStatus.Completed:
+                        <span class="badge bg-success rounded-pill">Hotovo</span>
+                        break;
+                    default:
+                        <span class="badge bg-light text-dark border">@Model.Project.Status</span>
+                        break;
+                }
+            </div>
 
-                    @switch (Model.Project.Status)
-                    {
-                        case ProjectStatus.Planning:
-                            <span class="badge bg-secondary rounded-pill">Plánování</span>
-                            ; break;
-                        case ProjectStatus.Ordered:
-
-                            <span class="badge bg-warning text-dark rounded-pill">Objednáno</span>
-                            ; break;
-                        case ProjectStatus.ReadyToBuild:
-
-                            <span class="badge bg-info text-dark rounded-pill">Připraveno</span>
-                            ; break;
-                        case ProjectStatus.InProduction:
-
-                            <span class="badge bg-primary rounded-pill">Ve výrobě</span>
-                            ; break;
-                        case ProjectStatus.Completed:
-
-                            <span class="badge bg-success rounded-pill">Hotovo</span>
-                            ; break;
-                        default:
-
-                            <span class="badge bg-light text-dark border">@Model.Project.Status</span>
-                            ; break;
-                    }
-                </div>
-
-                <div class="text-muted small mt-1 d-flex gap-3">
-                    <span><i class="bi bi-clock me-1"></i> Odhad: <strong>@Model.Project.EstimatedHours h</strong></span>
-                    <span><i class="bi bi-stopwatch me-1"></i> Realita: <strong>@Model.Project.RealHours h</strong></span>
-                    <span class="d-none d-md-inline">| Vytvořeno: @Model.Project.CreatedAt.ToLocalTime().ToString("d. M. yyyy")</span>
-                </div>
+            <div class="text-muted small mt-1 d-flex gap-3">
+                <span><i class="bi bi-clock me-1"></i> Odhad: <strong>@Model.Project.EstimatedHours h</strong></span>
+                <span><i class="bi bi-stopwatch me-1"></i> Realita: <strong>@Model.Project.RealHours h</strong></span>
+                <span class="d-none d-md-inline">| Vytvořeno: @Model.Project.CreatedAt.ToLocalTime().ToString("d. M. yyyy")</span>
             </div>
         </div>
 
+        @* PRAVÁ STRANA: Tlačítka *@
         <div class="d-flex gap-2">
-            <form asp-action="Duplicate" method="post" onsubmit="return confirm('Vytvořit kopii tohoto projektu?');">
-                <input type="hidden" name="id" value="@Model.Project.Id" />
-                <button type="submit" class="btn btn-light border text-secondary" title="Duplikovat projekt">
-                    <i class="bi bi-files"></i> <span class="d-none d-lg-inline">Duplikovat</span>
-                </button>
-            </form>
 
-            <a asp-action="Edit" asp-route-id="@Model.Project.Id" class="btn btn-light border text-secondary" title="Upravit nastavení">
-                <i class="bi bi-pencil"></i> <span class="d-none d-lg-inline">Upravit</span>
+            <a asp-action="Index" class="btn btn-light border text-secondary shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Zpět
             </a>
 
             @if (!isLocked)
             {
+                <a asp-action="Edit" asp-route-id="@Model.Project.Id" class="btn btn-light border text-secondary shadow-sm" title="Upravit nastavení">
+                    <i class="bi bi-pencil me-1"></i> <span class="d-none d-lg-inline">Upravit</span>
+                </a>
+
                 <form asp-action="ConsumeFromStock" method="post" onsubmit="return confirm('Opravdu odečíst položky ze skladu? Projekt se uzamkne.');">
                     <input type="hidden" name="id" value="@Model.Project.Id" />
                     <button type="submit" class="btn btn-success shadow-sm">
@@ -79,14 +68,18 @@
             }
             else
             {
-                <button class="btn btn-secondary" disabled>
+                <button class="btn btn-light border text-secondary shadow-sm opacity-50" disabled>
+                    <i class="bi bi-pencil me-1"></i> <span class="d-none d-lg-inline">Upravit</span>
+                </button>
+
+                <button class="btn btn-secondary shadow-sm" disabled>
                     <i class="bi bi-lock-fill me-2"></i>Uzamčeno
                 </button>
             }
         </div>
     </div>
 
-    <div class="text-muted description-content mb-4 ms-5 ps-2 border-start border-3">
+    <div class="text-muted description-content mb-4 mt-2 ps-3 border-start border-3">
         @Model.Project.Description
     </div>
 
@@ -116,7 +109,7 @@
                             <h3 class="mb-0">@Model.TotalItems</h3>
                             <small class="text-muted">unikátních dílů</small>
                         </div>
-                        <div class="icon-shape bg-light text-primary rounded-circle p-3">
+                        <div class="icon-shape bg-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                             <i class="bi bi-list-task fs-4"></i>
                         </div>
                     </div>
@@ -133,7 +126,7 @@
                             <h3 class="mb-0 @(Model.TotalToBuy > 0 ? "text-warning" : "text-success")">@Model.TotalToBuy <span class="fs-6 text-muted">ks</span></h3>
                             <small class="text-muted">nutno objednat</small>
                         </div>
-                        <div class="icon-shape bg-light text-warning rounded-circle p-3">
+                        <div class="icon-shape bg-light text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                             <i class="bi bi-cart fs-4"></i>
                         </div>
                     </div>
@@ -150,7 +143,7 @@
                             <h3 class="mb-0">@Model.TotalFromStock</h3>
                             <small class="text-muted">ks rezervováno</small>
                         </div>
-                        <div class="icon-shape bg-light text-success rounded-circle p-3">
+                        <div class="icon-shape bg-light text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                             <i class="bi bi-box2 fs-4"></i>
                         </div>
                     </div>
@@ -206,198 +199,200 @@
 
                 @* --- TAB 1: KUSOVNÍK (BOM) --- *@
                 <div class="tab-pane fade show active" id="bom" role="tabpanel">
+                    <div class="p-4">
 
-                    <div class="card border rounded-4 shadow-sm mb-4">
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover align-middle mb-0" style="min-width: 800px;">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-4 text-center text-secondary text-uppercase py-3 border-bottom-0" style="width: 60px; font-size: 0.85rem;">Typ</th>
-                                        <th class="text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Položka</th>
-                                        <th class="text-center text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Potřeba</th>
-                                        <th class="text-center text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Skladem</th>
-                                        <th class="text-center text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Chybí</th>
-                                        <th class="text-end pe-4 text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Akce</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (Model.Project.Items != null && Model.Project.Items.Any())
-                                    {
-                                        foreach (var item in Model.Project.Items.OrderBy(i => i.Type).ThenBy(i => i.Id))
+                        <div class="card border rounded-4 shadow-sm mb-4">
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-hover align-middle mb-0" style="min-width: 800px;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4 text-center text-secondary text-uppercase py-3 border-bottom-0" style="width: 60px; font-size: 0.85rem;">Typ</th>
+                                            <th class="text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Položka</th>
+                                            <th class="text-center text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Potřeba</th>
+                                            <th class="text-center text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Skladem</th>
+                                            <th class="text-center text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Chybí</th>
+                                            <th class="text-end pe-4 text-secondary text-uppercase py-3 border-bottom-0" style="font-size: 0.85rem;">Akce</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.Project.Items != null && Model.Project.Items.Any())
                                         {
-                                            string name = item.Component?.Name ?? item.CustomName ?? "Unknown";
-                                            string manu = item.Component?.Manufacturer ?? "-";
-                                            string mpn = item.Component?.ManufacturerPartNumber ?? "-";
+                                            foreach (var item in Model.Project.Items.OrderBy(i => i.Type).ThenBy(i => i.Id))
+                                            {
+                                                string name = item.Component?.Name ?? item.CustomName ?? "Unknown";
+                                                string manu = item.Component?.Manufacturer ?? "-";
+                                                string mpn = item.Component?.ManufacturerPartNumber ?? "-";
 
-                                            <tr>
-                                                <td class="ps-4 text-center fs-5 text-muted border-bottom">
-                                                    @if (item.Type == ProjectItemType.PCB)
-                                                    {
-                                                        <i class="bi bi-motherboard" title="PCB Deska" data-bs-toggle="tooltip"></i>
-                                                    }
-                                                    else if (item.Type == ProjectItemType.Print3D)
-                                                    {
-                                                        <i class="bi bi-box-seam" title="3D Tisk" data-bs-toggle="tooltip"></i>
-                                                    }
-                                                    else if (item.Type == ProjectItemType.Other)
-                                                    {
-                                                        <i class="bi bi-tools" title="Jiné" data-bs-toggle="tooltip"></i>
-                                                    }
-                                                    else
-                                                    {
-                                                        <i class="bi bi-cpu" title="Součástka" data-bs-toggle="tooltip"></i>
-                                                    }
-                                                </td>
-
-                                                <td class="border-bottom">
-                                                    @if (item.Type == ProjectItemType.Standard && item.ComponentId != null)
-                                                    {
-                                                        <a asp-controller="Components" asp-action="Details" asp-route-id="@item.ComponentId" class="fw-bold text-decoration-none" title="Přejít na detail součástky">
-                                                            @name
-                                                        </a>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="fw-bold text-dark">@name</div>
-                                                    }
-
-                                                    @if (item.Type == ProjectItemType.Standard)
-                                                    {
-                                                        <div class="small text-muted mt-1">@manu | @mpn</div>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="small text-muted fst-italic mt-1">Vlastní výroba / Externí</div>
-                                                    }
-                                                </td>
-
-                                                <td class="text-center fs-5 fw-bold border-bottom">@item.QuantityRequired</td>
-
-                                                <td class="text-center border-bottom">
-                                                    @if (item.Type == ProjectItemType.Standard)
-                                                    {
-                                                        @if (item.QuantityFromStock > 0)
+                                                <tr>
+                                                    <td class="ps-4 text-center fs-5 text-muted border-bottom">
+                                                        @if (item.Type == ProjectItemType.PCB)
                                                         {
-                                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
-                                                                <i class="bi bi-check2"></i> @item.QuantityFromStock
+                                                            <i class="bi bi-motherboard" title="PCB Deska" data-bs-toggle="tooltip"></i>
+                                                        }
+                                                        else if (item.Type == ProjectItemType.Print3D)
+                                                        {
+                                                            <i class="bi bi-box-seam" title="3D Tisk" data-bs-toggle="tooltip"></i>
+                                                        }
+                                                        else if (item.Type == ProjectItemType.Other)
+                                                        {
+                                                            <i class="bi bi-tools" title="Jiné" data-bs-toggle="tooltip"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-cpu" title="Součástka" data-bs-toggle="tooltip"></i>
+                                                        }
+                                                    </td>
+
+                                                    <td class="border-bottom">
+                                                        @if (item.Type == ProjectItemType.Standard && item.ComponentId != null)
+                                                        {
+                                                            <a asp-controller="Components" asp-action="Details" asp-route-id="@item.ComponentId" class="fw-bold text-decoration-none" title="Přejít na detail součástky">
+                                                                @name
+                                                            </a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="fw-bold text-dark">@name</div>
+                                                        }
+
+                                                        @if (item.Type == ProjectItemType.Standard)
+                                                        {
+                                                            <div class="small text-muted mt-1">@manu | @mpn</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="small text-muted fst-italic mt-1">Vlastní výroba / Externí</div>
+                                                        }
+                                                    </td>
+
+                                                    <td class="text-center fs-5 fw-bold border-bottom">@item.QuantityRequired</td>
+
+                                                    <td class="text-center border-bottom">
+                                                        @if (item.Type == ProjectItemType.Standard)
+                                                        {
+                                                            @if (item.QuantityFromStock > 0)
+                                                            {
+                                                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
+                                                                    <i class="bi bi-check2"></i> @item.QuantityFromStock
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted small fw-bold">-</span>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            @if (item.IsFulfilled)
+                                                            {
+                                                                <form asp-action="ToggleFulfillment" method="post" class="d-inline">
+                                                                    <input type="hidden" name="itemId" value="@item.Id" />
+                                                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                                                    <button type="submit" class="btn badge bg-success text-white border-0 rounded-pill px-3 py-2" title="Kliknutím zrušit">
+                                                                        <i class="bi bi-check-lg me-1"></i> Hotovo
+                                                                    </button>
+                                                                </form>
+                                                            }
+                                                            else
+                                                            {
+                                                                <form asp-action="ToggleFulfillment" method="post" class="d-inline">
+                                                                    <input type="hidden" name="itemId" value="@item.Id" />
+                                                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                                                    <button type="submit" class="btn badge bg-light text-secondary border rounded-pill px-3 py-2" title="Označit jako hotové/doručené">
+                                                                        <i class="bi bi-circle me-1"></i> Čekám
+                                                                    </button>
+                                                                </form>
+                                                            }
+                                                        }
+                                                    </td>
+
+                                                    <td class="text-center border-bottom">
+                                                        @if (item.QuantityToBuy > 0 && !item.IsFulfilled)
+                                                        {
+                                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-2">
+                                                                <i class="bi bi-exclamation-circle me-1"></i> @item.QuantityToBuy
                                                             </span>
                                                         }
                                                         else
                                                         {
-                                                            <span class="text-muted small fw-bold">-</span>
+                                                            <span class="text-muted small"><i class="bi bi-check-all me-1"></i> OK</span>
                                                         }
-                                                    }
-                                                    else
-                                                    {
-                                                        @if (item.IsFulfilled)
+                                                    </td>
+
+                                                    <td class="text-end pe-4 border-bottom">
+                                                        @if (!Model.IsLocked)
                                                         {
-                                                            <form asp-action="ToggleFulfillment" method="post" class="d-inline">
-                                                                <input type="hidden" name="itemId" value="@item.Id" />
+                                                            <form asp-action="DeleteItem" method="post" class="d-inline">
+                                                                <input type="hidden" name="id" value="@item.Id" />
                                                                 <input type="hidden" name="projectId" value="@Model.Project.Id" />
-                                                                <button type="submit" class="btn badge bg-success text-white border-0 rounded-pill px-3 py-2" title="Kliknutím zrušit">
-                                                                    <i class="bi bi-check-lg me-1"></i> Hotovo
+                                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 opacity-75 custom-hover-opacity" title="Odstranit">
+                                                                    <i class="bi bi-trash fs-5"></i>
                                                                 </button>
                                                             </form>
                                                         }
-                                                        else
-                                                        {
-                                                            <form asp-action="ToggleFulfillment" method="post" class="d-inline">
-                                                                <input type="hidden" name="itemId" value="@item.Id" />
-                                                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
-                                                                <button type="submit" class="btn badge bg-light text-secondary border rounded-pill px-3 py-2" title="Označit jako hotové/doručené">
-                                                                    <i class="bi bi-circle me-1"></i> Čekám
-                                                                </button>
-                                                            </form>
-                                                        }
-                                                    }
-                                                </td>
-
-                                                <td class="text-center border-bottom">
-                                                    @if (item.QuantityToBuy > 0 && !item.IsFulfilled)
-                                                    {
-                                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-2">
-                                                            <i class="bi bi-exclamation-circle me-1"></i> @item.QuantityToBuy
-                                                        </span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-muted small"><i class="bi bi-check-all me-1"></i> OK</span>
-                                                    }
-                                                </td>
-
-                                                <td class="text-end pe-4 border-bottom">
-                                                    @if (!Model.IsLocked)
-                                                    {
-                                                        <form asp-action="DeleteItem" method="post" class="d-inline">
-                                                            <input type="hidden" name="id" value="@item.Id" />
-                                                            <input type="hidden" name="projectId" value="@Model.Project.Id" />
-                                                            <button type="submit" class="btn btn-sm btn-link text-danger p-0 opacity-75 custom-hover-opacity" title="Odstranit">
-                                                                <i class="bi bi-trash fs-5"></i>
-                                                            </button>
-                                                        </form>
-                                                    }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="6" class="text-center py-5 text-muted border-bottom-0">
+                                                    <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
+                                                    Kusovník je zatím prázdný.<br>
+                                                    <small>Přidejte součástky nebo desky pomocí formuláře níže.</small>
                                                 </td>
                                             </tr>
                                         }
-                                    }
-                                    else
-                                    {
-                                        <tr>
-                                            <td colspan="6" class="text-center py-5 text-muted border-bottom-0">
-                                                <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
-                                                Kusovník je zatím prázdný.<br>
-                                                <small>Přidejte součástky nebo desky pomocí formuláře níže.</small>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>                   
+
+                        @* --- PŘIDAT POLOŽKU --- *@
+                        @if (!Model.IsLocked)
+                        {
+                            <div class="card bg-light border-0 rounded-4 shadow-sm p-4 mt-4 mb-2">
+                                <h6 class="fw-bold mb-3 text-secondary text-uppercase" style="font-size: 0.85rem;">
+                                    <i class="bi bi-plus-circle me-2"></i>Přidat položku do kusovníku
+                                </h6>
+
+                                <form asp-action="AddItem" method="post" class="row g-3 align-items-end">
+                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted fw-bold mb-1">Typ položky</label>
+                                        <select name="type" class="form-select border-0 shadow-sm" id="itemTypeSelect">
+                                            <option value="Standard">Součástka ze skladu</option>
+                                            <option value="PCB">Plošný spoj (PCB)</option>
+                                            <option value="Print3D">3D Tisk</option>
+                                            <option value="Other">Jiné (Externí)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-5" id="componentSelectGroup">
+                                        <label class="form-label small text-muted fw-bold mb-1">Vyhledat součástku</label>
+                                        <select asp-for="SelectedComponentId" asp-items="Model.AvailableComponents" id="componentSelect" class="form-select border-0 shadow-sm">
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-5" id="customNameGroup" style="display:none;">
+                                        <label class="form-label small text-muted fw-bold mb-1">Vlastní název</label>
+                                        <input asp-for="CustomName" class="form-control border-0 shadow-sm" placeholder="Např. Krabička víko v2..." />
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted fw-bold mb-1">Potřeba ks</label>
+                                        <input asp-for="QuantityRequired" class="form-control border-0 shadow-sm text-center" min="1" value="1" />
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-primary w-100 rounded-pill shadow-sm"><i class="bi bi-plus-lg me-1"></i> Přidat</button>
+                                    </div>
+                                </form>
+                            </div>
+                        }
                     </div>
-
-                    @* --- PŘIDAT POLOŽKU --- *@
-                    @if (!Model.IsLocked)
-                    {
-                        <div class="card bg-light border-0 rounded-4 shadow-sm p-4 mt-4 mb-2">
-                            <h6 class="fw-bold mb-3 text-secondary text-uppercase" style="font-size: 0.85rem;">
-                                <i class="bi bi-plus-circle me-2"></i>Přidat položku do kusovníku
-                            </h6>
-
-                            <form asp-action="AddItem" method="post" class="row g-3 align-items-end">
-                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
-
-                                <div class="col-md-3">
-                                    <label class="form-label small text-muted fw-bold mb-1">Typ položky</label>
-                                    <select name="type" class="form-select border-0 shadow-sm" id="itemTypeSelect">
-                                        <option value="Standard">Součástka ze skladu</option>
-                                        <option value="PCB">Plošný spoj (PCB)</option>
-                                        <option value="Print3D">3D Tisk</option>
-                                        <option value="Other">Jiné (Externí)</option>
-                                    </select>
-                                </div>
-
-                                <div class="col-md-5" id="componentSelectGroup">
-                                    <label class="form-label small text-muted fw-bold mb-1">Vyhledat součástku</label>
-                                    <select asp-for="SelectedComponentId" asp-items="Model.AvailableComponents" id="componentSelect" class="form-select border-0 shadow-sm">
-                                    </select>
-                                </div>
-
-                                <div class="col-md-5" id="customNameGroup" style="display:none;">
-                                    <label class="form-label small text-muted fw-bold mb-1">Vlastní název</label>
-                                    <input asp-for="CustomName" class="form-control border-0 shadow-sm" placeholder="Např. Krabička víko v2..." />
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted fw-bold mb-1">Potřeba ks</label>
-                                    <input asp-for="QuantityRequired" class="form-control border-0 shadow-sm text-center" min="1" value="1" />
-                                </div>
-
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-primary w-100 rounded-pill shadow-sm"><i class="bi bi-plus-lg me-1"></i> Přidat</button>
-                                </div>
-                            </form>
-                        </div>
-                    }
                 </div>
 
                 @* --- TAB 2: NÁKUP --- *@
@@ -614,14 +609,56 @@
                             </div>
 
                             <div class="card bg-success bg-opacity-10 border-0 rounded-4 shadow-sm p-4 mt-2">
-                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                     <div>
                                         <h4 class="mb-1 fw-bold text-success">Celkem: @grandTotal.ToString("N2") @mainCurrency</h4>
                                         <small class="text-success text-opacity-75"><i class="bi bi-info-circle me-1"></i> Cena je orientační bez dopravy a poplatků</small>
                                     </div>
-                                    <a asp-action="ExportOrderCsv" asp-route-projectId="@Model.Project.Id" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold">
-                                        <i class="bi bi-file-earmark-spreadsheet me-2"></i> Stáhnout CSV
-                                    </a>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @* --- PDF DROPDOWN --- *@
+                                        <div class="dropdown">
+                                            <button class="btn btn-dark rounded-pill px-4 shadow-sm fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bi bi-file-pdf me-2"></i> Stáhnout PDF
+                                            </button>
+                                            <ul class="dropdown-menu shadow border-0 rounded-3 mt-2">
+                                                <li class="dropdown-header text-muted fw-bold">Vyberte dodavatele:</li>
+                                                @foreach (var supplierGroup in selectedOffers)
+                                                {
+                                                    <li>
+                                                        <a class="dropdown-item py-2 d-flex align-items-center" asp-action="ExportSupplierPdf" asp-route-projectId="@Model.Project.Id" asp-route-supplierName="@supplierGroup.Key">
+                                                            <i class="bi bi-download me-2 text-dark opacity-75"></i> Objednávka @supplierGroup.Key
+                                                        </a>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+
+                                        @* --- CSV DROPDOWN --- *@
+                                        <div class="dropdown">
+                                            <button class="btn btn-success rounded-pill px-4 shadow-sm fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bi bi-file-earmark-spreadsheet me-2"></i> Stáhnout CSV
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
+                                                <li class="dropdown-header text-muted fw-bold">Vyberte dodavatele:</li>
+                                                @foreach (var supplierGroup in selectedOffers)
+                                                {
+                                                    <li>
+                                                        <a class="dropdown-item py-2 d-flex align-items-center" asp-action="ExportOrderCsv" asp-route-projectId="@Model.Project.Id" asp-route-supplierName="@supplierGroup.Key">
+                                                            <i class="bi bi-download me-2 text-success opacity-75"></i> Pouze @supplierGroup.Key
+                                                        </a>
+                                                    </li>
+                                                }
+                                                <li><hr class="dropdown-divider opacity-25"></li>
+                                                <li>
+                                                    <a class="dropdown-item py-2 fw-bold d-flex align-items-center" asp-action="ExportOrderCsv" asp-route-projectId="@Model.Project.Id">
+                                                        <i class="bi bi-files me-2 text-success"></i> Všichni dodavatelé
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         }
@@ -667,11 +704,16 @@
                                                         <i class="bi bi-file-zip fs-1 d-block" style="line-height: 1;"></i>
                                                     </div>
                                                 }
-                                                else if (doc.FileName.EndsWith(".png") || doc.FileName.EndsWith(".jpg") || doc.FileName.EndsWith(".jpeg"))
+                                                else if (doc.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                                                doc.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                                                doc.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                                                doc.FileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
                                                 {
-                                                    <div class="d-inline-block bg-success bg-opacity-10 text-success rounded-circle p-3 mb-3">
-                                                        <i class="bi bi-file-image fs-1 d-block" style="line-height: 1;"></i>
-                                                    </div>
+                                                    <a href="@doc.FilePath" target="_blank" class="d-block mb-3" title="Otevřít obrázek v plné velikosti">
+                                                        <div class="d-flex justify-content-center align-items-center bg-white rounded-4 overflow-hidden mx-auto border shadow-sm" style="height: 80px; width: 80px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                                            <img src="@doc.FilePath" alt="Náhled" class="img-fluid" style="height: 100%; width: 100%; object-fit: cover;">
+                                                        </div>
+                                                    </a>
                                                 }
                                                 else
                                                 {

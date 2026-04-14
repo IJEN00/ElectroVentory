@@ -1,5 +1,6 @@
 ﻿using InventoryApp.Models;
 using InventoryApp.Services;
+using InventoryApp.Services.Suppliers;
 using InventoryApp.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -34,6 +35,7 @@ namespace InventoryApp.Controllers
 
             var components = await _componentSvc.GetAllAsync();
             var componentItems = components
+                .Where(c => c.IsActive)
                 .OrderBy(c => c.Name)
                 .Select(c => new SelectListItem
                 {
@@ -79,6 +81,13 @@ namespace InventoryApp.Controllers
             if (id == null) return NotFound();
             var project = await _svc.GetByIdAsync(id.Value);
             if (project == null) return NotFound();
+
+            if (project.ConsumedAt != null)
+            {
+                TempData["ToastError"] = "Uzamčený projekt již nelze upravovat.";
+                return RedirectToAction(nameof(Details), new { id = project.Id });
+            }
+
             return View(project);
         }
 
@@ -94,7 +103,12 @@ namespace InventoryApp.Controllers
                 try
                 {
                     await _svc.UpdateAsync(project);
-                    return RedirectToAction(nameof(Details), new { id = project.Id }); 
+                    return RedirectToAction(nameof(Details), new { id = project.Id });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    TempData["ToastError"] = ex.Message;
+                    return RedirectToAction(nameof(Details), new { id = project.Id });
                 }
                 catch (KeyNotFoundException)
                 {
@@ -214,12 +228,17 @@ namespace InventoryApp.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportOrderCsv(int projectId)
+        public async Task<IActionResult> ExportOrderCsv(int projectId, string? supplierName = null)
         {
             try
             {
-                var bytes = await _svc.GenerateOrderCsvAsync(projectId);
-                return File(bytes, "text/csv", $"Order_Project_{projectId}.csv");
+                var bytes = await _svc.GenerateOrderCsvAsync(projectId, supplierName);
+
+                string fileName = string.IsNullOrEmpty(supplierName)
+                    ? $"Objednavka_Komplet_{projectId}.csv"
+                    : $"Objednavka_{supplierName.Replace(" ", "_")}.csv";
+
+                return File(bytes, "text/csv", fileName);
             }
             catch (Exception ex)
             {
@@ -278,6 +297,83 @@ namespace InventoryApp.Controllers
 
             TempData["ToastError"] = "Kopírování se nezdařilo.";
             return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportSupplierPdf(int projectId, string supplierName)
+        {
+            try
+            {
+                var bytes = await _svc.GenerateSupplierPdfAsync(projectId, supplierName);
+                return File(bytes, "application/pdf", $"Objednavka_{supplierName.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf");
+            }
+            catch (Exception ex)
+            {
+                TempData["ToastError"] = "Chyba při generování PDF: " + ex.Message;
+                return RedirectToAction(nameof(Details), new { id = projectId });
+            }
+        }
+
+        // TAJNÁ TESTOVACÍ STRÁNKA PRO KOMPLETNÍ MĚŘENÍ API
+        [HttpGet("Projects/ZmeritApi")]
+        public async Task<IActionResult> ZmeritApiOdezvu(
+            [FromServices] ISupplierClient _apiClient)
+        {
+            var sw = new System.Diagnostics.Stopwatch();
+            var vysledky = new System.Text.StringBuilder();
+
+            vysledky.AppendLine("=== KOMPLETNÍ MĚŘENÍ ODEZVY API PRO BAKALÁŘKU ===");
+
+            // Pomocná lokální funkce pro vytvoření položky
+            ProjectItem VytvorTestovaciPolozku(string nazevDilu)
+            {
+                return new ProjectItem
+                {
+                    CustomName = nazevDilu,
+                    QuantityRequired = 1
+                };
+            }
+
+            // Pomocná lokální funkce pro spuštění jedné sady měření
+            async Task ProvedTest(int pocet, string nazevTestu)
+            {
+                vysledky.AppendLine($"\n{nazevTestu}: {pocet} položek paralelně");
+                var tasks = new List<Task<List<SupplierOffer>>>();
+
+                sw.Restart();
+                for (int i = 0; i < pocet; i++)
+                {
+                    // Vygenerujeme názvy typu "TEST-PART-1", "TEST-PART-2"...
+                    var item = VytvorTestovaciPolozku($"TEST-PART-{i}");
+                    tasks.Add(_apiClient.SearchAsync(item));
+                }
+
+                // Počkáme na dokončení všech dotazů
+                await Task.WhenAll(tasks);
+                sw.Stop();
+
+                vysledky.AppendLine($"Celkový čas pro {pocet} položek: {sw.ElapsedMilliseconds} ms");
+                vysledky.AppendLine($"Průměrný čas na 1 položku: {sw.ElapsedMilliseconds / pocet} ms");
+            }
+
+            // --- SPUŠTĚNÍ VŠECH TESTŮ ---
+
+            // TEST 1: 1 položka
+            await ProvedTest(1, "TEST 1");
+            await Task.Delay(1500); // Pauza na vydechnutí API
+
+            // TEST 2: 5 položek
+            await ProvedTest(5, "TEST 2");
+            await Task.Delay(1500);
+
+            // TEST 3: 10 položek
+            await ProvedTest(10, "TEST 3");
+            await Task.Delay(2000); // Tady dáme raději 2 vteřiny
+
+            // TEST 4: 50 položek
+            await ProvedTest(50, "TEST 4");
+
+            return Content(vysledky.ToString(), "text/plain", System.Text.Encoding.UTF8);
         }
     }
 }

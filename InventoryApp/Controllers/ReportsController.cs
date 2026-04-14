@@ -1,5 +1,8 @@
 ﻿using InventoryApp.Services;
 using Microsoft.AspNetCore.Mvc;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace InventoryApp.Controllers
 {
@@ -31,6 +34,12 @@ namespace InventoryApp.Controllers
 
             ViewBag.Days = days;
             ViewBag.ProjectsOnly = projectsOnly;
+            return View(rows);
+        }
+
+        public async Task<IActionResult> Projects()
+        {
+            var rows = await _svc.GetProjectReportAsync();
             return View(rows);
         }
     }

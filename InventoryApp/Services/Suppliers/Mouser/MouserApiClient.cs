@@ -1,10 +1,11 @@
 ﻿using InventoryApp.Models;
 using InventoryApp.Services.Suppliers.Mouser.Models;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace InventoryApp.Services.Suppliers.Mouser
 {
@@ -47,7 +48,7 @@ namespace InventoryApp.Services.Suppliers.Mouser
                 SearchByPartRequest = new MouserPartSearchRequest
                 {
                     MouserPartNumber = symbol,
-                    PartSearchOptions = "string" 
+                    PartSearchOptions = "" 
                 }
             };
 
@@ -90,13 +91,14 @@ namespace InventoryApp.Services.Suppliers.Mouser
             if (part.PriceBreaks != null && part.PriceBreaks.Any())
             {
                 var raw = part.PriceBreaks.First().Price ?? "0";
-                raw = raw.Replace("Kč", "", StringComparison.OrdinalIgnoreCase)
-                         .Replace("$", "").Replace("€", "").Replace("£", "")
-                         .Replace("\u00A0", " ")
-                         .Trim();
 
-                if (!decimal.TryParse(raw, NumberStyles.Any, new CultureInfo("cs-CZ"), out unitPrice))
-                    decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out unitPrice);
+                var match = Regex.Match(raw, @"[\d,\.]+");
+                if (match.Success)
+                {
+                    string cleanNumber = match.Value.Replace(',', '.');
+
+                    decimal.TryParse(cleanNumber, NumberStyles.Any, CultureInfo.InvariantCulture, out unitPrice);
+                }
             }
 
             var minOrderQty = 1;
@@ -114,7 +116,8 @@ namespace InventoryApp.Services.Suppliers.Mouser
                 LeadTimeDays = null,
                 ProductUrl = string.IsNullOrWhiteSpace(part.ProductDetailUrl)
                     ? $"https://www.mouser.com/ProductDetail/{part.MouserPartNumber}"
-                    : part.ProductDetailUrl
+                    : part.ProductDetailUrl,
+                SupplierPartNumber = part.MouserPartNumber
             };
 
             offers.Add(offer);

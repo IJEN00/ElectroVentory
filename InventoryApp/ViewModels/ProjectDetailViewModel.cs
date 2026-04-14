@@ -47,5 +47,18 @@ namespace InventoryApp.ViewModels
         }
 
         public string ProgressColor => Progress >= 100 ? "bg-success" : (Progress > 50 ? "bg-primary" : "bg-warning");
+
+        public bool CanConsumeStock
+        {
+            get
+            {
+                if (Project == null || Project.Items == null || !Project.Items.Any())
+                    return false;
+
+                return Project.Items
+                    .Where(i => i.Type == ProjectItemType.Standard)
+                    .All(i => i.Component != null && i.Component.Quantity >= i.QuantityRequired);
+            }
+        }
     }
 }

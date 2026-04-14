@@ -81,6 +81,38 @@
                             </div>
                         </div>
 
+                        <div class="mb-4">
+                            <label asp-for="ImageUpload" class="form-label fw-bold small text-uppercase text-muted">Fotografie součástky</label>
+                            <div class="card border rounded-3 bg-white shadow-sm">
+                                <div class="card-body p-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-sm-4 text-center">
+                                            @if (!string.IsNullOrEmpty(Model.CurrentImagePath))
+                                            {
+                                                <img id="imagePreview" src="@Model.CurrentImagePath" alt="Aktuální foto" class="img-fluid rounded-3 shadow-sm border p-1 bg-white" style="max-height: 120px; object-fit: contain;">
+                                                <div id="imagePlaceholder" class="d-none"></div>
+                                            }
+                                            else
+                                            {
+                                                <div id="imagePlaceholder" class="border border-2 border-dashed rounded-3 p-3 bg-light opacity-50 text-center">
+                                                    <i class="bi bi-camera fs-2 text-muted d-block"></i>
+                                                    <span class="small text-muted">Bez fotky</span>
+                                                </div>
+                                                <img id="imagePreview" src="#" alt="Náhled fotky" class="img-fluid rounded-3 shadow-sm border p-1 bg-white d-none" style="max-height: 120px; object-fit: contain;">
+                                            }
+                                        </div>
+                                        <div class="col-sm-8 mt-3 mt-sm-0">
+                                            <div class="input-group">
+                                                <input asp-for="ImageUpload" type="file" class="form-control" accept="image/*" onchange="previewImage(this, 'imagePreview', 'imagePlaceholder')" />
+                                                <span class="input-group-text bg-light text-muted"><i class="bi bi-upload"></i></span>
+                                            </div>
+                                            <small class="form-text text-muted">Doporučený formát: JPG nebo PNG (max. 5 MB).</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <hr class="text-muted opacity-25 my-4" />
 
                         <div class="mb-3">
@@ -329,6 +361,17 @@
             const dt = new DataTransfer();
             selectedFiles.forEach(f => dt.items.add(f));
             filesInput.files = dt.files;
+        }
+
+        function previewImage(input, previewId, placeholderId) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#' + placeholderId).addClass('d-none');
+                    $('#' + previewId).attr('src', e.target.result).removeClass('d-none');
+                }
+                reader.readAsDataTransfer(input.files[0]);
+            }
         }
 
         filesInput?.addEventListener("change", (e) => {

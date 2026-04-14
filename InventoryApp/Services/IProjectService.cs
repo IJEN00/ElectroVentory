@@ -20,10 +20,12 @@ namespace InventoryApp.Services
         Task AutoSelectCheapestAsync(int projectId); 
 
         Task ConsumeStockAsync(int projectId); 
-        Task<byte[]> GenerateOrderCsvAsync(int projectId);
+        Task<byte[]> GenerateOrderCsvAsync(int projectId, string? supplierName = null);
         Task UploadFileAsync(int projectId, IFormFile file);
         Task DeleteFileAsync(int fileId);
         Task ToggleItemFulfillmentAsync(int itemId);
         Task<int> DuplicateProjectAsync(int originalId);
+        Task<byte[]> GenerateSupplierPdfAsync(int projectId, string supplierName);
+        Task<List<Project>> GetDashboardActiveProjectsAsync(int limit = 6);
     }
 }

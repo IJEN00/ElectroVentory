@@ -101,7 +101,8 @@ namespace InventoryApp.Services.Suppliers.TME
                     Currency = responseObj.Data.Currency, 
                     InStock = stockQty > 0,
                     MinOrderQty = 1,
-                    ProductUrl = $"https://www.tme.eu/cz/details/{product.Symbol}"
+                    ProductUrl = $"https://www.tme.eu/cz/details/{product.Symbol}",
+                    SupplierPartNumber = product.Symbol
                 };
 
                 result.Add(offer);

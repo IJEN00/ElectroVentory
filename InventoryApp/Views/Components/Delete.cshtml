@@ -1,27 +1,30 @@
 ﻿@model InventoryApp.Models.Component
 @{
-    ViewData["Title"] = "Smazat součástku";
+    bool isArchiving = Model.IsActive;
+    ViewData["Title"] = isArchiving ? "Archivovat součástku" : "Smazat součástku";
 }
 
 <div class="container d-flex justify-content-center align-items-center" style="min-height: 60vh;">
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="max-width: 600px; width: 100%;">
 
-        <div class="card-header bg-danger text-white text-center py-4 border-0">
+        <div class="card-header @(isArchiving ? "bg-primary text-white" : "bg-danger text-white") text-center py-4 border-0">
             <div class="mb-2">
-                <i class="bi bi-exclamation-circle-fill" style="font-size: 3rem; opacity: 0.9;"></i>
+                <i class="bi @(isArchiving ? "bi-archive-fill" : "bi-exclamation-circle-fill")" style="font-size: 3rem; opacity: 0.9;"></i>
             </div>
-            <h4 class="mb-0 fw-bold">Opravdu smazat?</h4>
-            <p class="mb-0 opacity-75 small">Tuto akci nelze vrátit zpět.</p>
+            <h4 class="mb-0 fw-bold">@(isArchiving ? "Opravdu archivovat?" : "Opravdu smazat?")</h4>
+            <p class="mb-0 opacity-75 small">
+                @(isArchiving ? "Součástka se skryje, ale historie v projektech zůstane zachována." : "Tuto akci nelze vrátit zpět.")
+            </p>
         </div>
 
         <div class="card-body p-4 text-center">
             <p class="text-muted mb-4">
-                Chystáte se trvale odstranit součástku:
+                @(isArchiving ? "Chystáte se archivovat součástku:" : "Chystáte se trvale odstranit součástku:")
             </p>
 
             <div class="bg-light rounded-3 p-3 mb-4 text-start border">
                 <div class="d-flex align-items-center mb-3">
-                    <div class="icon-shape bg-white text-danger rounded-3 p-3 me-3 shadow-sm border">
+                    <div class="icon-shape bg-white @(isArchiving ? "text-primary" : "text-danger") rounded-3 p-3 me-3 shadow-sm border">
                         <i class="bi bi-cpu fs-4"></i>
                     </div>
                     <div>
@@ -64,8 +67,8 @@
                     <a asp-action="Index" class="btn btn-light btn-lg px-4 border">
                         Zrušit
                     </a>
-                    <button type="submit" class="btn btn-danger btn-lg px-4 shadow-sm">
-                        <i class="bi bi-trash-fill me-2"></i> Smazat
+                    <button type="submit" class="btn @(isArchiving ? "btn-primary" : "btn-danger") btn-lg px-4 shadow-sm">
+                        <i class="bi @(isArchiving ? "bi-archive-fill" : "bi-trash-fill") me-2"></i> @(isArchiving ? "Archivovat" : "Smazat")
                     </button>
                 </div>
             </form>

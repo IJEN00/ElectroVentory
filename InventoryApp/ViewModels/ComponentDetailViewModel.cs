@@ -24,5 +24,7 @@ namespace InventoryApp.ViewModels
         public string StatusIcon => IsOutOfStock ? "bi-x-circle" : (IsLowStock ? "bi-exclamation-circle" : "bi-check-circle");
 
         public int ToBuy => Math.Max(ReorderPoint - Quantity, 0);
+        public bool IsActive { get; set; }
+        public string? ImagePath { get; set; }
     }
 }

@@ -155,6 +155,9 @@
         <ul class="nav nav-pills">
             <li class="nav-item"><a class="nav-link @(action == "LowStock" ? "active shadow-sm" : "")" asp-controller="Reports" asp-action="LowStock"><i class="bi bi-exclamation-triangle me-1"></i> Dochází</a></li>
             <li class="nav-item"><a class="nav-link @(action == "Consumption" ? "active shadow-sm" : "")" asp-controller="Reports" asp-action="Consumption"><i class="bi bi-graph-down me-1"></i> Spotřeba</a></li>
+            <li class="nav-item">
+                <a class="nav-link @(action == "Projects" ? "active shadow-sm" : "")" asp-controller="Reports" asp-action="Projects"><i class="bi bi-clipboard2-check me-1"></i> Projekty</a>
+            </li>
         </ul>
     </div>
 
@@ -165,7 +168,7 @@
                 <div class="btn-group shadow-sm" role="group">
                     <a asp-action="Consumption" asp-route-days="7" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 7 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">7 dní</a>
                     <a asp-action="Consumption" asp-route-days="30" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 30 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">30 dní</a>
-                    <a asp-action="Consumption" asp-route-days="90" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 90 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">90 dní</a>
+                    <a asp-action="Consumption" asp-route-days="0" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 0 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">Neomezené</a>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -236,13 +239,16 @@
                                         }
                                     </td>
                                     <td class="text-center">
-                                        @if (r.Quantity < r.ReorderPoint)
+                                        @if (r.Quantity == 0)
+                                        {
+                                            <span class="text-danger fw-bold">0 ks</span>
+                                        }
+                                        else if (r.Quantity < r.ReorderPoint)
                                         {
                                             <span class="text-warning fw-bold">@r.Quantity ks</span>
                                         }
                                         else
                                         {
-
                                             <span class="text-success">@r.Quantity ks</span>
                                         }
                                     </td>

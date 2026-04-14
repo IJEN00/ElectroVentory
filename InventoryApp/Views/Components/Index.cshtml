@@ -1,6 +1,8 @@
 ﻿@model List<InventoryApp.Models.Component>
 @{
     ViewData["Title"] = "Součástky";
+    // Bezpečně si vytáhneme informaci, zda zrovna zobrazujeme archivované
+    bool showingInactive = ViewBag.ShowingInactive as bool? ?? false;
 }
 
 @section Styles {
@@ -8,15 +10,15 @@
 
     <style>
         .dataTables_wrapper .row:first-child {
-            padding: 1rem 1.5rem; 
+            padding: 1rem 1.5rem;
             border-bottom: 1px solid #f0f0f0;
             background-color: #fff;
             margin-bottom: 0; 
-            align-items: center; 
+            align-items: center;
         }
 
         .dataTables_wrapper .row:last-child {
-            padding: 1rem 1.5rem; 
+            padding: 1rem 1.5rem;
             border-top: 1px solid #f0f0f0;
             background-color: #fff;
             margin-top: 0;
@@ -50,7 +52,7 @@
             border: 1px solid #dee2e6;
             padding: 0.375rem 0.75rem;
             margin-left: 0 !important; 
-            min-width: 250px; 
+            min-width: 250px;
         }
 
         .dataTables_filter input:focus {
@@ -77,7 +79,7 @@
         .page-item.active .page-link {
             background-color: #0d6efd;
             color: #fff;
-            box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); 
+            box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
         }
 
         .page-item.disabled .page-link {
@@ -103,14 +105,32 @@
 
 <div class="container-fluid" style="max-width: 1400px;">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div>
             <h2 class="fw-bold mb-0">Součástky</h2>
             <p class="text-muted mb-0">Správa skladových zásob a komponent</p>
         </div>
-        <a asp-controller="Components" asp-action="Create" class="btn btn-primary shadow-sm">
-            <i class="bi bi-plus-lg me-1"></i> Nová součástka
-        </a>
+        <div class="d-flex gap-2">
+            @* --- PŘEPÍNAČ ARCHIVOVANÝCH --- *@
+            <a asp-action="Index" asp-route-showInactive="@(showingInactive ? "false" : "true")" class="btn btn-light border text-secondary shadow-sm d-flex align-items-center">
+                @if (showingInactive)
+                {
+                    <i class="bi bi-eye-slash me-2"></i> <span>Skrýt archivované</span>
+                }
+                else
+                {
+                    <i class="bi bi-eye me-2"></i> <span>Zobrazit archivované</span>
+                }
+            </a>
+
+            <button type="button" class="btn btn-light border text-secondary shadow-sm d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="bi bi-filetype-csv me-1"></i> <span class="d-none d-sm-inline">Import CSV</span>
+            </button>
+            
+            <a asp-controller="Components" asp-action="Create" class="btn btn-primary shadow-sm d-flex align-items-center">
+                <i class="bi bi-plus-lg me-1"></i> Nová součástka
+            </a>
+        </div>
     </div>
 
     <div class="card border-0 shadow-sm mb-4 rounded-4">
@@ -134,7 +154,7 @@
                 </div>
                 <div class="col-md-3 text-end">
                     <button id="resetFilters" class="btn btn-light border text-secondary">
-                        <i class="bi bi-x-circle me-1"></i> Vyčistit filtry
+                        <i class="bi bi-x-circle me-1"></i> Vymazat filtry
                     </button>
                 </div>
             </div>
@@ -151,7 +171,6 @@
                             <th class="border-bottom-0">Umístění</th>
                             <th class="text-center border-bottom-0">Stav skladu</th>
                             <th class="text-end pe-4 border-bottom-0">Akce</th>
-
                             <th class="d-none">Rack</th>
                             <th class="d-none">Drawer</th>
                             <th class="d-none">Box</th>
@@ -166,6 +185,8 @@
                             string statusText = quantity == 0 ? "Není skladem" : (quantity < reorderPoint ? "Dochází" : "Skladem");
                             string statusIcon = quantity == 0 ? "bi-x-circle" : (quantity < reorderPoint ? "bi-exclamation-circle" : "bi-check-circle");
 
+                            bool isArchived = !item.IsActive;
+
                             <tr data-href="@Url.Action("Details", new { id = item.Id })" style="cursor: pointer;">
 
                                 <td class="ps-4 py-3">
@@ -174,7 +195,13 @@
                                             <i class="bi bi-cpu fs-5"></i>
                                         </div>
                                         <div>
-                                            <h6 class="mb-0 fw-bold text-dark">@item.Name</h6>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <h6 class="mb-0 fw-bold text-dark">@item.Name</h6>
+                                                @if (isArchived)
+                                                {
+                                                    <span class="badge bg-secondary" style="font-size: 0.65rem;">Archivováno</span>
+                                                }
+                                            </div>
                                             <small class="text-muted d-block text-truncate" style="max-width: 200px;">
                                                 @item.Manufacturer | @item.ManufacturerPartNumber
                                             </small>
@@ -217,10 +244,32 @@
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                            <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@item.Id"><i class="bi bi-pencil me-2"></i> Upravit</a></li>
-                                            <li><a class="dropdown-item" asp-action="Details" asp-route-id="@item.Id"><i class="bi bi-eye me-2"></i> Detail</a></li>
+                                            <li><a class="dropdown-item" asp-action="Details" asp-route-id="@item.Id"><i class="bi bi-eye me-2"></i> Otevřít</a></li>
+                                            <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@item.Id"><i class="bi bi-pencil me-2"></i> Upravit</a></li>                                           
+                                            <li>
+                                                <form asp-action="Duplicate" method="post" style="margin: 0;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-files me-2"></i> Kopírovat
+                                                    </button>
+                                                </form>
+                                            </li>
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item text-danger" asp-action="Delete" asp-route-id="@item.Id"><i class="bi bi-trash me-2"></i> Smazat</a></li>
+                                            
+                                            @* --- ZMĚNA TLAČÍTKA PODLE STAVU --- *@
+                                            @if (item.IsActive)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" asp-action="Delete" asp-route-id="@item.Id">
+                                                        <i class="bi bi-archive me-2"></i> Archivovat
+                                                    </a>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li><a class="dropdown-item text-danger" asp-action="Delete" asp-route-id="@item.Id"><i class="bi bi-trash me-2"></i> Trvale smazat</a></li>
+                                            }
                                         </ul>
                                     </div>
                                 </td>
@@ -232,6 +281,43 @@
                         }
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4 rounded-top-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-filetype-csv text-primary me-2"></i>Hromadný import (CSV)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavřít"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                <p class="text-muted small mb-4">
+                    Stáhněte si prázdnou šablonu, vyplňte ji v Excelu a nahrajte zpět. 
+                    Při ukládání v Excelu zvolte formát <strong>CSV (oddělený středníkem)</strong>.
+                </p>
+
+                <div class="mb-4">
+                    <a asp-action="DownloadCsvTemplate" class="btn btn-outline-secondary btn-sm rounded-pill w-100 border-dashed py-2" style="border-style: dashed;">
+                        <i class="bi bi-download me-2"></i> Stáhnout vzorovou šablonu
+                    </a>
+                </div>
+
+                <form asp-action="ImportCsv" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Zvolte vyplněný CSV soubor</label>
+                        <input type="file" name="file" class="form-control bg-light" accept=".csv" required />
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
+                        <i class="bi bi-cloud-upload me-2"></i> Nahrát a naimportovat
+                    </button>
+                </form>
+
             </div>
         </div>
     </div>

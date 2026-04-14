@@ -1,12 +1,19 @@
 ﻿using InventoryApp.Models;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 
 namespace InventoryApp.Services
 {
     public class ComponentService : IComponentService
     {
         private readonly AppDbContext _db;
-        public ComponentService(AppDbContext db) { _db = db; }
+        private readonly IWebHostEnvironment _env;
+
+        public ComponentService(AppDbContext db, IWebHostEnvironment env) 
+        { 
+            _db = db; 
+            _env = env;
+        }
 
 
         public async Task AddAsync(Component component)
@@ -18,14 +25,49 @@ namespace InventoryApp.Services
 
         public async Task DeleteAsync(int id)
         {
-            var entity = await _db.Components.FindAsync(id);
-            if (entity != null)
-            {
-                _db.Components.Remove(entity);
-                await _db.SaveChangesAsync();
-            }
-        }
+            var entity = await _db.Components
+                .Include(c => c.Documents)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
+            if (entity == null) return;
+
+            bool isUsedInProjects = await _db.ProjectItems.AnyAsync(pi => pi.ComponentId == id);
+            if (isUsedInProjects)
+            {
+                throw new InvalidOperationException("Tuto součástku nelze smazat, protože je součástí jednoho nebo více projektů. Místo toho ji prosím Archivujte.");
+            }
+
+            var transactions = await _db.InventoryTransactions.Where(t => t.ComponentId == id).ToListAsync();
+            if (transactions.Any())
+            {
+                _db.InventoryTransactions.RemoveRange(transactions);
+            }
+
+            if (!string.IsNullOrEmpty(entity.ImagePath))
+            {
+                var imgPath = Path.Combine(_env.WebRootPath, entity.ImagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(imgPath))
+                {
+                    System.IO.File.Delete(imgPath);
+                }
+            }
+
+            if (entity.Documents != null && entity.Documents.Any())
+            {
+                foreach (var doc in entity.Documents)
+                {
+                    var docPath = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(docPath))
+                    {
+                        System.IO.File.Delete(docPath);
+                    }
+                }
+                _db.Documents.RemoveRange(entity.Documents);
+            }
+
+            _db.Components.Remove(entity);
+            await _db.SaveChangesAsync();
+        }
 
         public async Task<List<Component>> GetAllAsync()
         {
@@ -43,7 +85,7 @@ namespace InventoryApp.Services
         {
             return await _db.Components
                 .Include(c => c.Location)
-                .Where(c => c.Quantity < (c.ReorderPoint ?? 5))
+                .Where(c => c.IsActive && c.Quantity < (c.ReorderPoint ?? 5))
                 .OrderBy(c => c.Quantity)
                 .ToListAsync();
         }
@@ -56,10 +98,10 @@ namespace InventoryApp.Services
         }
 
         public Task<int> GetTotalComponentsAsync()
-            => _db.Components.CountAsync();
+            => _db.Components.Where(c => c.IsActive).CountAsync();
 
         public Task<int> GetTotalQuantityAsync()
-            => _db.Components.SumAsync(c => c.Quantity);
+            => _db.Components.Where(c => c.IsActive).SumAsync(c => c.Quantity);
 
         public async Task<(List<string> Labels, List<int> Values)> GetConsumptionStatsAsync(int days)
         {
@@ -143,7 +185,7 @@ namespace InventoryApp.Services
             var component = await _db.Components.FindAsync(id);
             if (component == null) throw new Exception("Součástka nenalezena.");
 
-            component.Quantity = (byte)Math.Min(component.Quantity + amount, byte.MaxValue);
+            component.Quantity += amount;
 
             _db.InventoryTransactions.Add(new InventoryTransaction
             {
@@ -169,7 +211,7 @@ namespace InventoryApp.Services
                 throw new InvalidOperationException($"Nelze vyskladnit {amount} ks. Skladem je pouze {component.Quantity} ks.");
             }
 
-            component.Quantity -= (byte)amount;
+            component.Quantity -= amount;
 
             _db.InventoryTransactions.Add(new InventoryTransaction
             {
@@ -181,6 +223,132 @@ namespace InventoryApp.Services
             });
 
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<int> DuplicateAsync(int id)
+        {
+            var original = await _db.Components
+                .Include(c => c.Documents)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (original == null) return 0;
+
+            var copy = new Component
+            {
+                Name = original.Name + " (Kopie)",
+                Manufacturer = original.Manufacturer,
+                ManufacturerPartNumber = original.ManufacturerPartNumber,
+                Package = original.Package,
+                Quantity = 0, 
+                ReorderPoint = original.ReorderPoint,
+                LocationId = original.LocationId,
+                IsActive = true,
+                Documents = new List<Document>()
+            };
+
+            if (!string.IsNullOrEmpty(original.ImagePath))
+            {
+                var oldPath = Path.Combine(_env.WebRootPath, original.ImagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(oldPath))
+                {
+                    var ext = Path.GetExtension(oldPath);
+                    var newFileName = Guid.NewGuid().ToString() + "_copy" + ext;
+                    var newPath = Path.Combine(_env.WebRootPath, "uploads", "components", newFileName);
+
+                    System.IO.File.Copy(oldPath, newPath);
+                    copy.ImagePath = "/uploads/components/" + newFileName;
+                }
+            }
+
+            if (original.Documents != null && original.Documents.Any())
+            {
+                string uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "components");
+                Directory.CreateDirectory(uploadsFolder);
+
+                foreach (var doc in original.Documents)
+                {
+                    var oldDocPath = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(oldDocPath))
+                    {
+                        var newFileName = Guid.NewGuid().ToString() + "_" + doc.FileName;
+                        var newDocPath = Path.Combine(uploadsFolder, newFileName);
+
+                        System.IO.File.Copy(oldDocPath, newDocPath);
+
+                        copy.Documents.Add(new Document
+                        {
+                            FileName = doc.FileName,
+                            FilePath = "/uploads/components/" + newFileName,
+                            UploadedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
+            _db.Components.Add(copy);
+            await _db.SaveChangesAsync();
+
+            return copy.Id;
+        }
+
+        public async Task<(int importedCount, List<string> errors)> ImportFromCsvAsync(Stream fileStream)
+        {
+            var errors = new List<string>();
+            int importedCount = 0;
+
+            using var reader = new StreamReader(fileStream);
+            bool isHeader = true;
+            int lineNumber = 0;
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                lineNumber++;
+
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                if (isHeader)
+                {
+                    isHeader = false;
+                    continue;
+                }
+
+                var values = line.Split(';');
+
+                if (values.Length < 1 || string.IsNullOrWhiteSpace(values[0]))
+                {
+                    errors.Add($"Řádek {lineNumber}: Chybí název součástky.");
+                    continue;
+                }
+
+                try
+                {
+                    var component = new Component
+                    {
+                        Name = values[0].Trim(),
+                        Manufacturer = values.Length > 1 ? values[1].Trim() : null,
+                        ManufacturerPartNumber = values.Length > 2 ? values[2].Trim() : null,
+                        Quantity = values.Length > 3 && int.TryParse(values[3], out var q) ? q : 0,
+                        ReorderPoint = values.Length > 4 && int.TryParse(values[4], out var rp) ? rp : 5,
+
+                        IsActive = true
+                    };
+
+                    _db.Components.Add(component);
+                    importedCount++;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Řádek {lineNumber}: {ex.Message}");
+                }
+            }
+
+            if (importedCount > 0)
+            {
+                await _db.SaveChangesAsync();
+            }
+
+            return (importedCount, errors);
         }
     }
 }

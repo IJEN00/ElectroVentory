@@ -127,18 +127,38 @@
             <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-light border text-secondary">
                 <i class="bi bi-pencil me-1"></i> Upravit
             </a>
-            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-light border text-danger">
-                <i class="bi bi-trash"></i>
-            </a>
+            @if (Model.IsActive)
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-light border text-secondary">
+                    <i class="bi bi-archive me-1"></i> Archivovat
+                </a>
+            }
+            else
+            {
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i> Trvale smazat
+                </a>
+            }
         </div>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
         <div class="card-body p-4">
             <div class="d-flex align-items-center">
-                <div class="icon-shape bg-primary bg-opacity-10 text-primary rounded-3 p-3 me-3 shadow-sm border border-primary border-opacity-10">
-                    <i class="bi bi-cpu fs-1"></i>
-                </div>
+                @if (!string.IsNullOrEmpty(Model.ImagePath))
+                {
+                    <a href="@Model.ImagePath" target="_blank" title="Zvětšit obrázek" class="me-4 flex-shrink-0 text-decoration-none">
+                        <div class="bg-white rounded-4 shadow-sm border d-flex align-items-center justify-content-center overflow-hidden" style="width: 90px; height: 90px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <img src="@Model.ImagePath" alt="@Model.Name" class="img-fluid p-1" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                        </div>
+                    </a>
+                }
+                else
+                {
+                    <div class="icon-shape bg-primary bg-opacity-10 text-primary rounded-4 p-3 me-4 flex-shrink-0 shadow-sm border border-primary border-opacity-10 d-flex align-items-center justify-content-center" style="width: 90px; height: 90px;">
+                        <i class="bi bi-cpu" style="font-size: 2.5rem;"></i>
+                    </div>
+                }
 
                 <div class="flex-grow-1">
                     <h3 class="fw-bold mb-1">@Model.Name</h3>
@@ -316,10 +336,24 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@Model.Id" />
                             <label class="small fw-bold text-success mb-2"><i class="bi bi-plus-circle me-1"></i> Naskladnit</label>
-                            <div class="input-group input-group-sm mb-2">
-                                <input type="number" name="amount" class="form-control" placeholder="Ks" min="1" value="1">
-                                <input type="text" name="note" class="form-control w-50" placeholder="Poznámka...">
-                                <button class="btn btn-success" type="submit">OK</button>
+
+                            @* 1. Řádek: Ks + Dodavatel vedle sebe *@
+                            <div class="d-flex gap-2 mb-2">
+                                <input type="number" name="amount" class="form-control form-control-sm text-center fw-bold w-50" placeholder="Ks" min="1" value="1">
+                                <select name="supplier" class="form-select form-select-sm text-secondary w-50">
+                                    <option value="">Zdroj...</option>
+                                    <option value="TME">TME</option>
+                                    <option value="Mouser">Mouser</option>
+                                    <option value="Farnell">Farnell</option>
+                                    <option value="DigiKey">DigiKey</option>
+                                    <option value="Jiné">Jiné...</option>
+                                </select>
+                            </div>
+
+                            @* 2. Řádek: Poznámka + OK tlačítko spojené dohromady *@
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="note" class="form-control" placeholder="Volitelná poznámka...">
+                                <button class="btn btn-success fw-bold px-3 shadow-sm" type="submit" title="Potvrdit naskladnění">OK</button>
                             </div>
                         </form>
                     </div>
@@ -329,10 +363,14 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@Model.Id" />
                             <label class="small fw-bold text-danger mb-2"><i class="bi bi-dash-circle me-1"></i> Vyskladnit</label>
-                            <div class="input-group input-group-sm mb-2">
-                                <input type="number" name="amount" class="form-control" placeholder="Ks" min="1" value="1">
-                                <input type="text" name="note" class="form-control w-50" placeholder="Poznámka...">
-                                <button class="btn btn-danger" type="submit">OK</button>
+
+                            <div class="mb-2">
+                                <input type="number" name="amount" class="form-control form-control-sm text-center fw-bold" placeholder="Ks k výdeji" min="1" value="1">
+                            </div>
+
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="note" class="form-control" placeholder="Volitelná poznámka...">
+                                <button class="btn btn-danger fw-bold px-3 shadow-sm" type="submit" title="Potvrdit vyskladnění">OK</button>
                             </div>
                         </form>
                     </div>

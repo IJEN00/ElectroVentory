@@ -135,7 +135,7 @@
                                 <td class="ps-4 py-3">
                                     <div class="d-flex align-items-center">
                                         <div class="icon-shape bg-light text-dark rounded-3 p-3 me-3 flex-shrink-0">
-                                            <i class="bi bi-folder2-open fs-5"></i>
+                                            <i class="bi bi-clipboard2-check fs-5"></i>
                                         </div>
                                         <div>
                                             <h6 class="mb-0 fw-bold text-dark">
@@ -208,6 +208,15 @@
                                         <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                                             <li><a class="dropdown-item" asp-action="Details" asp-route-id="@item.Id"><i class="bi bi-eye me-2"></i> Otevřít</a></li>
                                             <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@item.Id"><i class="bi bi-pencil me-2"></i> Upravit</a></li>
+                                            <li>
+                                                <form asp-action="Duplicate" method="post" style="margin: 0;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-files me-2 text-secondary"></i> Kopírovat
+                                                    </button>
+                                                </form>
+                                            </li>
 
                                             @if (!isLocked)
                                             {

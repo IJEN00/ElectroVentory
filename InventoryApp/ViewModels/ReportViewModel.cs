@@ -9,6 +9,7 @@
         public int ReorderPoint { get; set; }
         public int ToBuy { get; set; }
         public string LocationDisplay { get; set; } = "–";
+        public string? LastSupplier { get; set; }
     }
 
     public class ConsumptionRow

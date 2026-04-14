@@ -6,5 +6,6 @@ namespace InventoryApp.Services
     {
         Task<List<LowStockRow>> GetLowStockReportAsync(string filter);
         Task<List<ConsumptionRow>> GetConsumptionReportAsync(int days, bool projectsOnly);
+        Task<List<InventoryApp.Models.Project>> GetProjectReportAsync();
     }
 }

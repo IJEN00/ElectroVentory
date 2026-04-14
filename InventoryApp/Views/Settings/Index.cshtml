@@ -7,22 +7,46 @@
 
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger">@TempData["Error"]</div>
+        <div class="alert alert-danger shadow-sm rounded-3">@TempData["Error"]</div>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success shadow-sm rounded-3">@TempData["Success"]</div>
     }
 
     <div class="row">
         <div class="col-md-6 mb-4">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white border-bottom pt-3 pb-2">
-                    <h5 class="mb-0 text-primary"><i class="fas fa-database me-2"></i> Záloha databáze</h5>
+                    <h5 class="mb-0 text-primary"><i class="fas fa-database me-2"></i> Záloha a Obnova</h5>
                 </div>
-                <div class="card-body">
-                    <p class="text-secondary mb-4">
-                        Systém ukládá veškerá data do lokální SQLite databáze. Pro prevenci ztráty dat v důsledku hardwarového selhání (např. poškození SD karty) je doporučeno pravidelně stahovat zálohu.
+                <div class="card-body d-flex flex-column">
+                    <p class="text-secondary mb-3">
+                        Systém ukládá veškerá data do lokální SQLite databáze. Pro prevenci ztráty dat v důsledku hardwarového selhání je doporučeno pravidelně stahovat zálohu.
                     </p>
-                    <a asp-controller="Settings" asp-action="DownloadBackup" class="btn btn-primary">
-                        <i class="fas fa-download me-2"></i> Stáhnout zálohu (.db)
-                    </a>
+
+                    <div class="bg-light p-3 rounded-3 mb-4 small text-muted border">
+                        <div class="mb-1"><strong><i class="fas fa-folder-open me-1"></i> Cesta k databázi:</strong> <br><span class="text-break">@ViewBag.DbPath</span></div>
+                        <div><strong><i class="fas fa-clock me-1"></i> Poslední záloha:</strong> @ViewBag.LastBackup</div>
+                    </div>
+
+                    <div class="mt-auto d-flex flex-column gap-3">
+                        <a asp-controller="Settings" asp-action="DownloadBackup" class="btn btn-primary w-100 shadow-sm">
+                            <i class="fas fa-download me-2"></i> Stáhnout zálohu (.db)
+                        </a>
+
+                        <hr class="my-1 opacity-25">
+
+                        <form asp-controller="Settings" asp-action="RestoreBackup" method="post" enctype="multipart/form-data" class="d-flex flex-column gap-2" onsubmit="return confirm('POZOR: Obnova přepíše veškerá aktuální data v systému. Opravdu chcete pokračovat?');">
+                            <label class="form-label small fw-bold text-secondary mb-0">Obnovit ze souboru:</label>
+                            <div class="input-group shadow-sm">
+                                <input type="file" name="backupFile" class="form-control" accept=".db" required>
+                                <button type="submit" class="btn btn-danger fw-bold">
+                                    <i class="fas fa-upload me-1"></i> Obnovit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

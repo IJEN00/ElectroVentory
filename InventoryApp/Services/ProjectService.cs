@@ -1,6 +1,9 @@
 ﻿using System.Text;
 using InventoryApp.Models;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 
 namespace InventoryApp.Services
@@ -24,6 +27,16 @@ namespace InventoryApp.Services
         {
             return await _context.Projects
                 .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<Project>> GetDashboardActiveProjectsAsync(int limit = 6)
+        {
+            return await _context.Projects
+                .Include(p => p.Items) 
+                .Where(p => p.Status != ProjectStatus.Completed && p.ConsumedAt == null) 
+                .OrderByDescending(p => p.CreatedAt) 
+                .Take(limit)
                 .ToListAsync();
         }
 
@@ -62,6 +75,12 @@ namespace InventoryApp.Services
 
         public async Task UpdateAsync(Project project)
         {
+            var existingProject = await _context.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Id == project.Id);
+            if (existingProject != null && existingProject.ConsumedAt != null)
+            {
+                throw new InvalidOperationException("Uzamčený projekt již nelze upravovat.");
+            }
+
             try
             {
                 _context.Projects.Update(project);
@@ -76,11 +95,41 @@ namespace InventoryApp.Services
 
         public async Task DeleteAsync(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
+            var project = await _context.Projects
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.SupplierOffers)
+                .Include(p => p.Documents)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (project == null) throw new KeyNotFoundException("Projekt nenalezen.");
 
             if (project.ConsumedAt != null)
                 throw new InvalidOperationException("Uzamčený (vyskladněný) projekt nelze smazat.");
+
+            if (project.Documents != null && project.Documents.Any())
+            {
+                foreach (var doc in project.Documents)
+                {
+                    var fullPath = Path.Combine(_env.WebRootPath, doc.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(fullPath))
+                    {
+                        File.Delete(fullPath);
+                    }
+                }
+                _context.Documents.RemoveRange(project.Documents);
+            }
+
+            if (project.Items != null && project.Items.Any())
+            {
+                foreach (var item in project.Items)
+                {
+                    if (item.SupplierOffers != null && item.SupplierOffers.Any())
+                    {
+                        _context.SupplierOffers.RemoveRange(item.SupplierOffers);
+                    }
+                }
+                _context.ProjectItems.RemoveRange(project.Items);
+            }
 
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
@@ -94,6 +143,10 @@ namespace InventoryApp.Services
         public async Task AddItemAsync(int projectId, int? componentId, string? customName, int quantity, ProjectItemType type = ProjectItemType.Standard)
         {
             if (quantity <= 0) throw new ArgumentException("Počet kusů musí být > 0");
+
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project != null && project.ConsumedAt != null)
+                throw new InvalidOperationException("Do uzamčeného projektu nelze přidávat položky.");
 
             var item = new ProjectItem
             {
@@ -113,8 +166,14 @@ namespace InventoryApp.Services
 
         public async Task DeleteItemAsync(int itemId)
         {
-            var item = await _context.ProjectItems.FindAsync(itemId);
+            var item = await _context.ProjectItems
+                .Include(i => i.Project)
+                .FirstOrDefaultAsync(i => i.Id == itemId);
+
             if (item == null) throw new KeyNotFoundException("Položka nenalezena.");
+
+            if (item.Project != null && item.Project.ConsumedAt != null)
+                throw new InvalidOperationException("Z uzamčeného projektu nelze mazat položky.");
 
             int projectId = item.ProjectId;
             _context.ProjectItems.Remove(item);
@@ -163,6 +222,22 @@ namespace InventoryApp.Services
             if (project == null) throw new KeyNotFoundException("Projekt nenalezen.");
             if (project.ConsumedAt != null) throw new InvalidOperationException("Projekt již byl vyskladněn.");
 
+            bool hasItems = project.Items != null && project.Items.Any();
+
+            if (!hasItems)
+            {
+                throw new InvalidOperationException("Nelze vyskladnit prázdný projekt. Přidejte nejprve položky do kusovníku.");
+            }
+
+            bool isMaterialReady = project.Items == null || project.Items
+                .Where(i => i.Type == ProjectItemType.Standard)
+                .All(i => i.Component != null && i.Component.Quantity >= i.QuantityRequired);
+
+            if (!isMaterialReady)
+            {
+                throw new InvalidOperationException("Nelze vyskladnit. Některé součástky chybí nebo jich není dostatek.");
+            }
+
             _planningService.RecalculateInMemory(project);
 
             foreach (var item in project.Items.Where(i => i.ComponentId != null && i.QuantityFromStock > 0))
@@ -182,7 +257,7 @@ namespace InventoryApp.Services
                 {
                     if (item.Component == null) continue;
 
-                    item.Component.Quantity -= (byte)item.QuantityFromStock; 
+                    item.Component.Quantity -= item.QuantityFromStock; 
 
                     _context.InventoryTransactions.Add(new InventoryTransaction
                     {
@@ -232,7 +307,7 @@ namespace InventoryApp.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<byte[]> GenerateOrderCsvAsync(int projectId)
+        public async Task<byte[]> GenerateOrderCsvAsync(int projectId, string? supplierName = null)
         {
             var project = await GetDetailsAsync(projectId);
             if (project == null) throw new KeyNotFoundException("Projekt nenalezen.");
@@ -240,7 +315,7 @@ namespace InventoryApp.Services
             var selectedOffers = project.Items
                 .Where(i => i.SupplierOffers != null && i.SupplierOffers.Any(o => o.IsSelected))
                 .SelectMany(i => i.SupplierOffers
-                    .Where(o => o.IsSelected)
+                    .Where(o => o.IsSelected && (supplierName == null || o.Supplier?.Name == supplierName))
                     .Select(o => new { Item = i, Offer = o }))
                 .ToList();
 
@@ -289,7 +364,7 @@ namespace InventoryApp.Services
                 await file.CopyToAsync(stream);
             }
 
-            var doc = new Document
+            var doc = new InventoryApp.Models.Document
             {
                 ProjectId = projectId,
                 FileName = fileName,
@@ -386,6 +461,95 @@ namespace InventoryApp.Services
 
             await _context.SaveChangesAsync();
             return newProject.Id; 
+        }
+
+        public async Task<byte[]> GenerateSupplierPdfAsync(int projectId, string supplierName)
+        {
+            // Nutné pro použití QuestPDF zdarma
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var project = await GetDetailsAsync(projectId);
+            if (project == null) throw new KeyNotFoundException("Projekt nenalezen.");
+
+            // Vyfiltrujeme jen položky pro tohoto konkrétního dodavatele
+            var itemsForSupplier = project.Items
+                .Where(i => !i.IsFulfilled && i.QuantityToBuy > 0 && i.SupplierOffers != null)
+                .SelectMany(i => i.SupplierOffers
+                    .Where(o => o.IsSelected && o.Supplier?.Name == supplierName)
+                    .Select(o => new { Item = i, Offer = o }))
+                .ToList();
+
+            if (!itemsForSupplier.Any()) throw new InvalidOperationException("Žádné položky pro tohoto dodavatele.");
+
+            decimal totalSum = itemsForSupplier.Sum(x => x.Item.QuantityToBuy * x.Offer.UnitPrice);
+            string currency = itemsForSupplier.First().Offer.Currency;
+
+            // Generování PDF
+            var pdf = QuestPDF.Fluent.Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(2, Unit.Centimetre);
+                    page.PageColor(Colors.White);
+                    page.DefaultTextStyle(x => x.FontSize(11));
+
+                    // Hlavička
+                    page.Header().Row(row =>
+                    {
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().Text($"Nákupní seznam: {supplierName}").FontSize(20).SemiBold().FontColor(Colors.Blue.Darken2);
+                            col.Item().Text($"Projekt: {project.Name}").FontSize(14).Light();
+                            col.Item().Text($"Vytvořeno: {DateTime.Now:d. M. yyyy}").FontSize(10).FontColor(Colors.Grey.Medium);
+                        });
+                    });
+
+                    page.Content().PaddingVertical(1, Unit.Centimetre).Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(3); // Název dílu
+                            columns.RelativeColumn(3); // Objednací číslo 
+                            columns.RelativeColumn(1); // Počet ks
+                            columns.RelativeColumn(2); // Cena celkem
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().BorderBottom(1).PaddingBottom(5).Text("Součástka").SemiBold();
+                            header.Cell().BorderBottom(1).PaddingBottom(5).Text("Objednací číslo (SKU)").SemiBold();
+                            header.Cell().BorderBottom(1).PaddingBottom(5).AlignRight().Text("Ks").SemiBold();
+                            header.Cell().BorderBottom(1).PaddingBottom(5).AlignRight().Text("Cena").SemiBold();
+                        });
+
+                        foreach (var line in itemsForSupplier)
+                        {
+                            var partName = line.Item.Component?.Name ?? line.Item.CustomName ?? "Neznámý";
+                            var sku = line.Offer.SupplierPartNumber ?? "N/A";
+                            var lineTotal = line.Item.QuantityToBuy * line.Offer.UnitPrice;
+
+                            table.Cell().PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Grey.Lighten3).Text(partName);
+                            table.Cell().PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Grey.Lighten3).Text(sku).FontFamily("Consolas"); 
+                            table.Cell().PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Grey.Lighten3).AlignRight().Text(line.Item.QuantityToBuy.ToString());
+                            table.Cell().PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Grey.Lighten3).AlignRight().Text($"{lineTotal:N2} {currency}");
+                        }
+
+                        table.Cell().ColumnSpan(3).PaddingTop(10).AlignRight().Text("Celkem k úhradě:").SemiBold().FontSize(14);
+                        table.Cell().PaddingTop(10).AlignRight().Text($"{totalSum:N2} {currency}").SemiBold().FontSize(14).FontColor(Colors.Blue.Darken2);
+                    });
+
+                    page.Footer().AlignCenter().Text(x =>
+                    {
+                        x.Span("Strana ");
+                        x.CurrentPageNumber();
+                        x.Span(" z ");
+                        x.TotalPages();
+                    });
+                });
+            });
+
+            return pdf.GeneratePdf();
         }
     }
 }

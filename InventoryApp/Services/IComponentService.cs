@@ -17,5 +17,7 @@ namespace InventoryApp.Services
         Task<(List<string> Labels, List<int> Values)> GetConsumptionStatsAsync(int days);
         Task AddStockAsync(int id, int amount, string? note);
         Task UseStockAsync(int id, int amount, string? note);
+        Task<int> DuplicateAsync(int id);
+        Task<(int importedCount, List<string> errors)> ImportFromCsvAsync(Stream fileStream);
     }
 }

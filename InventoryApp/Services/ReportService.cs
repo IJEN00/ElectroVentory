@@ -17,16 +17,35 @@ namespace InventoryApp.Services
         {
             var components = await _db.Components
                 .Include(c => c.Location)
+                .Where(c => c.IsActive && c.Quantity < (c.ReorderPoint ?? 5))
                 .OrderBy(c => c.Quantity)
                 .ThenBy(c => c.Name)
                 .ToListAsync();
 
+            var componentIds = components.Select(c => c.Id).ToList();
+
+            var allAddTransactions = await _db.InventoryTransactions
+                .Where(t => componentIds.Contains(t.ComponentId) && t.Type == InventoryTransactionType.Add)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            var lastTransactions = allAddTransactions
+                .Where(t => !string.IsNullOrWhiteSpace(t.Note))
+                .GroupBy(t => t.ComponentId)
+                .ToDictionary(g => g.Key, g => g.First().Note);
+
             var rows = components
-                .Where(c => c.Quantity < (c.ReorderPoint ?? 5))
                 .Select(c =>
                 {
                     int reorderPoint = c.ReorderPoint ?? 5;
                     int qty = c.Quantity;
+
+                    string? lastSupplier = null;
+                    if (lastTransactions.TryGetValue(c.Id, out var note) && !string.IsNullOrWhiteSpace(note))
+                    {
+                        var parts = note.Split('-');
+                        lastSupplier = parts[0].Trim();
+                    }
 
                     return new LowStockRow
                     {
@@ -36,7 +55,8 @@ namespace InventoryApp.Services
                         Quantity = qty,
                         ReorderPoint = reorderPoint,
                         ToBuy = Math.Max(reorderPoint - qty, 0),
-                        LocationDisplay = c.Location != null ? c.Location.DisplayName : "–"
+                        LocationDisplay = c.Location != null ? c.Location.DisplayName : "–",
+                        LastSupplier = lastSupplier 
                     };
                 })
                 .ToList();
@@ -52,13 +72,14 @@ namespace InventoryApp.Services
 
         public async Task<List<ConsumptionRow>> GetConsumptionReportAsync(int days, bool projectsOnly)
         {
-            if (days <= 0) days = 30;
-            if (days > 365) days = 365;
-
-            var since = DateTime.UtcNow.AddDays(-days);
-
             var q = _db.InventoryTransactions.AsNoTracking()
-                .Where(t => t.CreatedAt >= since && t.DeltaQuantity < 0);
+                .Where(t => t.DeltaQuantity < 0);
+
+            if (days > 0)
+            {
+                var since = DateTime.UtcNow.AddDays(-days);
+                q = q.Where(t => t.CreatedAt >= since);
+            }
 
             if (projectsOnly)
                 q = q.Where(t => t.ProjectId != null);
@@ -99,6 +120,26 @@ namespace InventoryApp.Services
             }
 
             return rows;
+        }
+
+        public async Task<List<Project>> GetProjectReportAsync()
+        {
+            var projects = await _db.Projects
+                .Include(p => p.Items) 
+                .ToListAsync();
+
+            return projects
+                .OrderBy(p => p.Status switch
+                {
+                    ProjectStatus.InProduction => 1, 
+                    ProjectStatus.Planning => 2,     
+                    ProjectStatus.ReadyToBuild => 3, 
+                    ProjectStatus.Ordered => 4,      
+                    ProjectStatus.Completed => 5,    
+                    _ => 6
+                })
+                .ThenByDescending(p => p.CreatedAt) 
+                .ToList();
         }
     }
 }

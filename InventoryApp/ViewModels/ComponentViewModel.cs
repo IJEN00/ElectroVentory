@@ -41,5 +41,9 @@ namespace InventoryApp.ViewModels
         public List<IFormFile> Files { get; set; } = new();
 
         public ICollection<Document> ExistingDocuments { get; set; } = new List<Document>();
+
+        public IFormFile? ImageUpload { get; set; }
+
+        public string? CurrentImagePath { get; set; }
     }
 }

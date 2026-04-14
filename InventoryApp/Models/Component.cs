@@ -37,5 +37,9 @@ namespace InventoryApp.Models
 
         [NotMapped]
         public bool IsLowStock => Quantity < (ReorderPoint ?? 5);
+
+        public string? ImagePath { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 }

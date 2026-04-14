@@ -164,6 +164,9 @@
                     <i class="bi bi-graph-down me-1"></i> Spotřeba
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link @(action == "Projects" ? "active shadow-sm" : "")" asp-controller="Reports" asp-action="Projects"><i class="bi bi-clipboard2-check me-1"></i> Projekty</a>
+            </li>
         </ul>
     </div>
 
@@ -175,7 +178,7 @@
                 <a asp-action="LowStock" asp-route-filter="low" class="btn @(filter == "low" ? "btn-white text-warning fw-bold" : "btn-light text-muted") border">Dochází</a>
             </div>
 
-            <button id="copyListBtn" class="btn btn-light border text-secondary">
+            <button id="copyListBtn" class="btn btn-light border text-secondary shadow-sm">
                 <i class="bi bi-clipboard me-1"></i> Zkopírovat seznam nákupu
             </button>
         </div>
@@ -207,6 +210,7 @@
                                 <th class="text-center">Stav skladu</th>
                                 <th class="text-center">Minimum</th>
                                 <th class="text-center">Koupit</th>
+                                <th>Poslední nákup</th>
                                 <th>Umístění</th>
                                 <th class="text-end pe-4">Akce</th>
                             </tr>
@@ -235,6 +239,18 @@
                                     <td class="text-center">
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 rounded-pill">+@r.ToBuy ks</span>
                                     </td>
+
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(r.LastSupplier))
+                                        {
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i> @r.LastSupplier</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">Neznámý</span>
+                                        }
+                                    </td>
+
                                     <td class="small text-muted"><i class="bi bi-geo-alt me-1"></i> @r.LocationDisplay</td>
                                     <td class="text-end pe-4">
                                         <div class="btn btn-sm btn-light border shadow-sm rounded-circle" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
@@ -268,7 +284,7 @@
                     searchPlaceholder: "Hledat v reportu..."
                 },
                 columnDefs: [
-                    { orderable: false, targets: 5 }
+                    { orderable: false, targets: 6 }
                 ],
                 pageLength: 25,
                 stateSave: true,

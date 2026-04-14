@@ -11,5 +11,6 @@ namespace InventoryApp.ViewModels
 
         public List<string> ConsumptionLabels { get; set; } = new();
         public List<int> ConsumptionValues { get; set; } = new();
+        public List<Project> ActiveProjects { get; set; } = new();
     }
 }
