@@ -8,7 +8,7 @@ namespace InventoryApp.Models
 
         [Required]
         [Display(Name = "Regál")]
-        public string Rack { get; set; }
+        public required string Rack { get; set; }
 
         [Display(Name = "Šuplík")]
         public string? Drawer { get; set; }

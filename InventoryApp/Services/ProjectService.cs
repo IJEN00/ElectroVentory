@@ -50,7 +50,7 @@ namespace InventoryApp.Services
             var project = await _context.Projects
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Component)
-                        .ThenInclude(c => c.Location) 
+                        .ThenInclude(c => c!.Location) 
                 .Include(p => p.Items)
                     .ThenInclude(i => i.SupplierOffers)
                         .ThenInclude(o => o.Supplier)
@@ -240,7 +240,7 @@ namespace InventoryApp.Services
 
             _planningService.RecalculateInMemory(project);
 
-            foreach (var item in project.Items.Where(i => i.ComponentId != null && i.QuantityFromStock > 0))
+            foreach (var item in project.Items!.Where(i => i.ComponentId != null && i.QuantityFromStock > 0))
             {
                 if (item.Component == null) continue;
                 if (item.QuantityFromStock > item.Component.Quantity)
@@ -253,7 +253,7 @@ namespace InventoryApp.Services
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
-                foreach (var item in project.Items.Where(i => i.ComponentId != null && i.QuantityFromStock > 0))
+                foreach (var item in project.Items!.Where(i => i.ComponentId != null && i.QuantityFromStock > 0))
                 {
                     if (item.Component == null) continue;
 
@@ -465,13 +465,11 @@ namespace InventoryApp.Services
 
         public async Task<byte[]> GenerateSupplierPdfAsync(int projectId, string supplierName)
         {
-            // Nutné pro použití QuestPDF zdarma
             QuestPDF.Settings.License = LicenseType.Community;
 
             var project = await GetDetailsAsync(projectId);
             if (project == null) throw new KeyNotFoundException("Projekt nenalezen.");
 
-            // Vyfiltrujeme jen položky pro tohoto konkrétního dodavatele
             var itemsForSupplier = project.Items
                 .Where(i => !i.IsFulfilled && i.QuantityToBuy > 0 && i.SupplierOffers != null)
                 .SelectMany(i => i.SupplierOffers
@@ -484,7 +482,6 @@ namespace InventoryApp.Services
             decimal totalSum = itemsForSupplier.Sum(x => x.Item.QuantityToBuy * x.Offer.UnitPrice);
             string currency = itemsForSupplier.First().Offer.Currency;
 
-            // Generování PDF
             var pdf = QuestPDF.Fluent.Document.Create(container =>
             {
                 container.Page(page =>
@@ -494,7 +491,6 @@ namespace InventoryApp.Services
                     page.PageColor(Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(11));
 
-                    // Hlavička
                     page.Header().Row(row =>
                     {
                         row.RelativeItem().Column(col =>
@@ -509,10 +505,10 @@ namespace InventoryApp.Services
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(3); // Název dílu
-                            columns.RelativeColumn(3); // Objednací číslo 
-                            columns.RelativeColumn(1); // Počet ks
-                            columns.RelativeColumn(2); // Cena celkem
+                            columns.RelativeColumn(3); 
+                            columns.RelativeColumn(3);  
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(2); 
                         });
 
                         table.Header(header =>
