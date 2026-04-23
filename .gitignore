@@ -366,3 +366,4 @@ FodyWeavers.xsd
 *.db-shm
 *.db-wal
 inventory.db
+/InventoryApp/last_backup.txt
