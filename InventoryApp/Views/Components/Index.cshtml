@@ -1,12 +1,12 @@
 ﻿@model List<InventoryApp.Models.Component>
 @{
     ViewData["Title"] = "Součástky";
-    // Bezpečně si vytáhneme informaci, zda zrovna zobrazujeme archivované
     bool showingInactive = ViewBag.ShowingInactive as bool? ?? false;
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css" />
 
     <style>
         .dataTables_wrapper .row:first-child {
@@ -52,7 +52,6 @@
             border: 1px solid #dee2e6;
             padding: 0.375rem 0.75rem;
             margin-left: 0 !important; 
-            min-width: 250px;
         }
 
         .dataTables_filter input:focus {
@@ -100,6 +99,36 @@
         #componentsTable tbody tr:hover {
             background-color: rgba(13, 110, 253, 0.05);
         }
+
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+        table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+            background-color: #0d6efd; 
+            border: none;
+            box-shadow: none;
+        }
+
+        @@media (max-width: 767.98px) {
+            .dataTables_wrapper .row:first-child {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            .dataTables_filter label {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+            }
+            .dataTables_filter input {
+                width: 100%;
+                margin-left: 0 !important;
+                margin-top: 0.5rem;
+            }
+            .dataTables_length {
+                text-align: left;
+            }
+        }
     </style>
 }
 
@@ -110,7 +139,7 @@
             <h2 class="fw-bold mb-0">Součástky</h2>
             <p class="text-muted mb-0">Správa skladových zásob a komponent</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0">
             @* --- PŘEPÍNAČ ARCHIVOVANÝCH --- *@
             <a asp-action="Index" asp-route-showInactive="@(showingInactive ? "false" : "true")" class="btn btn-light border text-secondary shadow-sm d-flex align-items-center">
                 @if (showingInactive)
@@ -124,7 +153,7 @@
             </a>
 
             <button type="button" class="btn btn-light border text-secondary shadow-sm d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#importModal">
-                <i class="bi bi-filetype-csv me-1"></i> <span class="d-none d-sm-inline">Import CSV</span>
+                <i class="bi bi-filetype-csv me-1"></i> <span>Import CSV</span>
             </button>
             
             <a asp-controller="Components" asp-action="Create" class="btn btn-primary shadow-sm d-flex align-items-center">
@@ -137,22 +166,22 @@
         <div class="card-body bg-light rounded-4">
             <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-funnel me-1"></i> Filtrovat umístění</h6>
             <div class="row g-2">
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3"">
                     <select id="RackFilter" class="form-select border-0 shadow-sm">
                         <option value="">Všechny regály</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3">
                     <select id="DrawerFilter" class="form-select border-0 shadow-sm">
                         <option value="">Všechny šuplíky</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-sm-6 col-lg-3">
                     <select id="BoxFilter" class="form-select border-0 shadow-sm">
                         <option value="">Všechny krabičky</option>
                     </select>
                 </div>
-                <div class="col-md-3 text-end">
+                <div class="col-12 col-sm-6 col-lg-3 text-end">
                     <button id="resetFilters" class="btn btn-light border text-secondary">
                         <i class="bi bi-x-circle me-1"></i> Vymazat filtry
                     </button>
@@ -164,13 +193,13 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table id="componentsTable" class="table table-hover align-middle mb-0" style="width:100%">
+                <table id="componentsTable" class="table table-hover align-middle mb-0 responsive nowrap" style="width:100%">
                     <thead class="bg-light text-muted small text-uppercase">
                         <tr>
-                            <th class="ps-4 border-bottom-0">Název & Popis</th>
+                            <th class="ps-4 border-bottom-0 all">Název & Popis</th>
                             <th class="border-bottom-0">Umístění</th>
                             <th class="text-center border-bottom-0">Stav skladu</th>
-                            <th class="text-end pe-4 border-bottom-0">Akce</th>
+                            <th class="text-end pe-4 border-bottom-0 all">Akce</th>
                             <th class="d-none">Rack</th>
                             <th class="d-none">Drawer</th>
                             <th class="d-none">Box</th>
@@ -327,15 +356,26 @@
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
+
     <script>
         $(document).ready(function () {
             let table = $('#componentsTable').DataTable({
+                responsive: true,
                 language: {
                     url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/cs.json",
                     searchPlaceholder: "Hledat název, výrobce..."
                 },
                 columnDefs: [
-                    { orderable: false, targets: 3 }, 
+                    // Název & Popis (Index 0) - Nejdůležitější
+                    { responsivePriority: 1, targets: 0 },
+                    // Stav skladu (Index 2) - Druhý nejdůležitější (chceš ho vidět na mobilu)
+                    { responsivePriority: 2, targets: 2 },
+                    // Akce (Index 3) - Třetí nejdůležitější
+                    { responsivePriority: 3, targets: 3, orderable: false },
+                    // Umístění (Index 1) - Nejméně důležité pro mobil (schová se jako první)
+                    { responsivePriority: 10, targets: 1 },
                     { searchable: true, targets: [4, 5, 6] } 
                 ],
                 pageLength: 10,
@@ -414,6 +454,14 @@
                     return;
                 }
 
+                var $td = $(e.target).closest('td');
+                if ($td.hasClass('dtr-control')) {
+                    var clickX = e.clientX - $td[0].getBoundingClientRect().left;
+
+                    if (clickX < 40) {
+                        return;
+                    }
+                }
                 var url = $(this).data('href');
                 if (url) {
                     window.location.href = url;

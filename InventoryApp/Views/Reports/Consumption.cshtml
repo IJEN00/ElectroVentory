@@ -9,6 +9,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css" />
 
     <style>
         .card {
@@ -80,7 +81,6 @@
             border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             padding: 0.375rem 0.75rem;
-            min-width: 250px;
             margin-left: 0 !important;
         }
 
@@ -143,6 +143,42 @@
             justify-content: center;
             border-radius: 0.5rem;
         }
+
+        @@media (max-width: 767.98px) {
+            .dataTables_wrapper .row:first-child
+
+        {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .dataTables_filter label {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .dataTables_filter input {
+            width: 100%;
+            margin-left: 0 !important;
+            margin-top: 0.5rem;
+        }
+
+        .dataTables_length {
+            text-align: left;
+        }
+
+        }
+
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+        table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+            background-color: #0d6efd;
+            border: none;
+            box-shadow: none;
+        }
     </style>
 }
 
@@ -152,7 +188,7 @@
             <h2 class="fw-bold mb-0">Reporty</h2>
             <p class="text-muted mb-0">Analýza zásob a spotřeby</p>
         </div>
-        <ul class="nav nav-pills">
+        <ul class="nav nav-pills flex-column flex-sm-row mt-3 mt-md-0">
             <li class="nav-item"><a class="nav-link @(action == "LowStock" ? "active shadow-sm" : "")" asp-controller="Reports" asp-action="LowStock"><i class="bi bi-exclamation-triangle me-1"></i> Dochází</a></li>
             <li class="nav-item"><a class="nav-link @(action == "Consumption" ? "active shadow-sm" : "")" asp-controller="Reports" asp-action="Consumption"><i class="bi bi-graph-down me-1"></i> Spotřeba</a></li>
             <li class="nav-item">
@@ -162,22 +198,25 @@
     </div>
 
     <div class="card border-0 shadow-sm mb-4 rounded-4">
-        <div class="card-body bg-light rounded-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="card-body bg-light rounded-4 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+
             <div class="d-flex align-items-center gap-2">
-                <span class="text-uppercase text-muted small fw-bold">Období:</span>
+                <span class="text-uppercase text-muted small fw-bold mb-0">Období:</span>
                 <div class="btn-group shadow-sm" role="group">
                     <a asp-action="Consumption" asp-route-days="7" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 7 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">7 dní</a>
                     <a asp-action="Consumption" asp-route-days="30" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 30 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">30 dní</a>
                     <a asp-action="Consumption" asp-route-days="0" asp-route-projectsOnly="@projectsOnly" class="btn @(days == 0 ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">Neomezené</a>
                 </div>
             </div>
+
             <div class="d-flex align-items-center gap-2">
-                <span class="text-uppercase text-muted small fw-bold">Zdroj:</span>
+                <span class="text-uppercase text-muted small fw-bold mb-0">Zdroj:</span>
                 <div class="btn-group shadow-sm" role="group">
                     <a asp-action="Consumption" asp-route-days="@days" asp-route-projectsOnly="false" class="btn @(!projectsOnly ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">Vše</a>
                     <a asp-action="Consumption" asp-route-days="@days" asp-route-projectsOnly="true" class="btn @(projectsOnly ? "btn-white text-primary fw-bold" : "btn-light text-muted") border">Jen projekty</a>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -194,21 +233,21 @@
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table id="reportTable" class="table table-hover align-middle mb-0" style="width:100%">
+                    <table id="reportTable" class="table table-hover align-middle mb-0 responsive nowrap" style="width:100%">
                         <thead>
                             <tr>
-                                <th class="ps-4">Položka</th>
-                                <th class="text-center">Spotřeba</th>
+                                <th class="ps-4 all">Položka</th>
+                                <th class="text-center all">Spotřeba</th>
                                 <th class="text-center">Počet výdejů</th>
                                 <th class="text-center">Zdroj</th>
                                 <th class="text-center">Skladem</th>
-                                <th class="text-end pe-4">Akce</th>
+                                <th class="text-end pe-4 all">Akce</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var r in Model)
                             {
-                                <tr style="cursor: pointer;" onclick="window.location='@Url.Action("Details", "Components", new { id = r.ComponentId })'">
+                                <tr style="cursor: pointer;" data-href='@Url.Action("Details", "Components", new { id = r.ComponentId })' ">
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center">
                                             <div class="icon-box bg-primary bg-opacity-10 text-primary me-3 flex-shrink-0">
@@ -270,12 +309,15 @@
 @section Scripts {
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) });
 
             $('#reportTable').DataTable({
+                responsive: true,
                 language: {
                     url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/cs.json",
                     searchPlaceholder: "Hledat v reportu..."
@@ -287,6 +329,25 @@
                 dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
                      "<'row'<'col-sm-12'tr>>" +
                      "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
+            });
+
+            $('#reportTable tbody').on('click', 'tr', function (e) {
+                if ($(e.target).closest('.dropdown, button, a').length) {
+                    return;
+                }
+
+                var $td = $(e.target).closest('td');
+                if ($td.hasClass('dtr-control')) {
+                    var clickX = e.clientX - $td[0].getBoundingClientRect().left;
+
+                    if (clickX < 40) {
+                        return;
+                    }
+                }
+                var url = $(this).data('href');
+                if (url) {
+                    window.location.href = url;
+                }
             });
         });
     </script>
